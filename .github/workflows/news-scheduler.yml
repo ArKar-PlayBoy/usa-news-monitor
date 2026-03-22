@@ -1,0 +1,38 @@
+name: News Update Scheduler
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, json, mbstring, xml
+      
+      - name: Cache seen URLs
+        uses: actions/cache@v4
+        with:
+          path: storage/app/seen_urls.json
+          key: seen-urls-${{ github.run_id }}
+          restore-keys: |
+            seen-urls-
+      
+      - name: Install Dependencies
+        run: composer install --no-dev --optimize-autoloader
+      
+      - name: Run News Update
+        run: php artisan news:update
+        env:
+          NEWS_API_TOKEN: ${{ secrets.NEWS_API_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
